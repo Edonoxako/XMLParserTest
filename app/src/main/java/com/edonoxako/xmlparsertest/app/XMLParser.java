@@ -10,56 +10,37 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by EugeneM on 09.02.2015.
  */
-public class XMLParser {
-
-    String xmlEncoding = "windows-1251";
-    String requestRes;
-
-    Document doc;
+public class XMLParser extends Parser {
 
     String LOG_TAG = "magic";
 
-    public XMLParser() throws IOException, ParserConfigurationException, SAXException {
-        String url = "http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-
-//        BufferedReader in = new BufferedReader(
-//                new InputStreamReader(con.getInputStream(), xmlEncoding));
-//        String inputLine;
-//        StringBuffer response = new StringBuffer();
-//
-//        while ((inputLine = in.readLine()) != null) {
-//            response.append(inputLine);
-//        }
-//        in.close();
-//        requestRes = response.toString();
-
-        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-
-        InputStream in = con.getInputStream();
-        doc = dBuilder.parse(in);
-        doc.getDocumentElement().normalize();
-        in.close();
+    public XMLParser(ParseCallback callback, String sourceUrl) {
+        super(callback, sourceUrl);
     }
 
-    public List<List<String>> parse() {
+    @Override
+    protected List<List<String>> parse(String rawData) {
         Log.d(LOG_TAG, "Начали парсить");
-        NodeList nList = doc.getElementsByTagName("Cube")/*.item(0).getChildNodes().item(0).getChildNodes()*/;
-        Log.d(LOG_TAG, "Lenght: " + nList.getLength());
+
         List<List<String>> rates = new ArrayList<List<String>>();
         List<String> data;
+
+        Document doc = convertToDocument(rawData);
+        if (doc == null) {
+            return rates;
+        }
+        NodeList nList = doc.getElementsByTagName("Cube")/*.item(0).getChildNodes().item(0).getChildNodes()*/;
+        Log.d(LOG_TAG, "Lenght: " + nList.getLength());
+
 
         for(int i = 2; i < nList.getLength(); i++) {
             Node nNode = nList.item(i);
@@ -85,5 +66,24 @@ public class XMLParser {
         rates.add(data);
         Log.d(LOG_TAG, "Закончили парсить");
         return rates;
+    }
+
+    private Document convertToDocument(String data) {
+        Document doc = null;
+        try(InputStream in = new ByteArrayInputStream(data.getBytes())) {
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            doc = dBuilder.parse(in);
+            doc.getDocumentElement().normalize();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        finally {
+            return doc;
+        }
     }
 }

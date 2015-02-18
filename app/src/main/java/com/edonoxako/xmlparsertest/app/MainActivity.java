@@ -4,16 +4,17 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.List;
 
 public class MainActivity extends Activity implements View.OnClickListener, ParseCallback{
 
-    private String URL = "http://www.floatrates.com/daily/usd.json";
-
     private TextView dataTV;
-    private Button refreshBtn;
+    private Button refreshJSONBtn;
+    private Button refreshXMLBtn;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,25 +22,38 @@ public class MainActivity extends Activity implements View.OnClickListener, Pars
         setContentView(R.layout.activity_main);
 
         dataTV = (TextView) findViewById(R.id.dataTextView);
-        refreshBtn = (Button) findViewById(R.id.refreshButton);
+        refreshJSONBtn = (Button) findViewById(R.id.refreshJSONButton);
+        refreshXMLBtn = (Button) findViewById(R.id.refreshXMLButton);
+        progressBar = (ProgressBar) findViewById(R.id.progressBar);
 
-        refreshBtn.setOnClickListener(this);
-    }
-
-    private void getData() {
-        Parser parser = new JSONParser(this, URL);
-        parser.extractData();
+        refreshJSONBtn.setOnClickListener(this);
+        refreshXMLBtn.setOnClickListener(this);
     }
 
     @Override
     public void onClick(View v) {
-        getData();
+        dataTV.setText("");
+        boolean isXml = false;
+        switch (v.getId()) {
+            case R.id.refreshJSONButton:
+                isXml = false;
+                break;
+
+            case R.id.refreshXMLButton:
+                isXml = true;
+                break;
+        }
+        progressBar.setVisibility(View.VISIBLE);
+        Parser parser = ParserFactory.createParser(this, isXml);
+        parser.extractData();
     }
 
     @Override
     public void onParseDone(List<List<String>> rates) {
+        progressBar.setVisibility(View.GONE);
         if (rates.isEmpty()) {
             dataTV.setText("Error. Data unavailable");
+            return;
         }
 
         String res = "";
